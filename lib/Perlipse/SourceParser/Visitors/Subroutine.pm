@@ -1,23 +1,11 @@
 package Perlipse::SourceParser::Visitors::Subroutine;
+use base qw(Perlipse::SourceParser::Visitors::Visitor);
 
 use strict;
 
-use Perlipse::SourceParser::Utils;
-
-my $utils = 'Perlipse::SourceParser::Utils';
-
-sub accepts
-{
-    my $class = shift;
-    my ($element) = @_;
-
-    return ($element->class eq 'PPI::Statement::Sub');
-}
-
-sub endVisit
-{
-    my $class = shift;
-}
+use constant {
+    SUPPORTED_ELEMENTS => qw(PPI::Statement::Sub),
+};
 
 sub visit
 {
@@ -28,14 +16,14 @@ sub visit
 
     if ($element->forward)
     {
-        $node->sourceEnd($utils->lastLocation($element));
+        $node->sourceEnd($class->utils->lastLocation($element));
     }
     elsif ($element->block)
     {
         my $finish = $element->block->finish;
         if ($finish)
         {
-            $node->sourceEnd($utils->location($finish));
+            $node->sourceEnd($class->utils->location($finish));
         }
         else
         {
@@ -47,25 +35,16 @@ sub visit
         # print STDERR "subroutine has no block or forward declaration";
     }
 
-    if (!defined $ast->curPkg)
-    {
-        $ast->curPkg(_createMain($ast));
-    }
-
     $ast->curPkg->addStatement($node);
 
     return 1;
 }
 
-sub _createMain
+##
+
+sub _supported_elements
 {
-    return shift->createNode(
-        type        => 'PPI::Statement::Package',
-        name        => 'main',
-        nStart   => 0,
-        nEnd     => 0,
-        sStart => 0,
-    );
+    return SUPPORTED_ELEMENTS;
 }
 
 1;

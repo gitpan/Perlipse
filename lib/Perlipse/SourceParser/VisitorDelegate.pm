@@ -5,7 +5,14 @@ use fields qw(cache);
 
 use Module::Pluggable
   require     => 1,
+  except      => 'Perlipse::SourceParser::Visitors::Visitor',
   search_path => ['Perlipse::SourceParser::Visitors'];
+
+=head1 NAME
+
+Perlipse::SourceParser::VisitorDelegate -- parser visitor delegate
+
+=cut
 
 sub new
 {
@@ -37,6 +44,8 @@ sub visit
     return;
 }
 
+## private
+
 sub _find_visitor
 {
     my $self = shift;
@@ -48,6 +57,8 @@ sub _find_visitor
     {
         foreach my $plugin ($self->plugins)
         {
+            # printf "plugin: %s\n", $plugin;
+            
             if (!$plugin->accepts($element))
             {
                 next;

@@ -12,8 +12,8 @@ WriteMakefile(
     PREREQ_PM    => {
         'Class::Accessor'   => 0.31,
         'Module::Pluggable' => 3.8,
-        'PPI'               => 1.202_01,
+        'PPI'               => 1.204_01,
         'XML::Writer'       => 0.604,
-        'Test::Simple'      => 0.44,
+        'Test::Simple'      => 0.80,
     },
 );

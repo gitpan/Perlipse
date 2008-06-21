@@ -1,10 +1,10 @@
-package Perlipse::SourceParser::Visitors::Package;
+package Perlipse::SourceParser::Visitors::Include;
 use base qw(Perlipse::SourceParser::Visitors::Visitor);
 
 use strict;
 
 use constant {
-    SUPPORTED_ELEMENTS => qw(PPI::Statement::Package),
+    SUPPORTED_ELEMENTS => qw(PPI::Statement::Include),
 };
 
 sub visit
@@ -13,7 +13,9 @@ sub visit
     my ($element, $ast) = @_;
     
     my $node = $ast->createNode(element => $element);
-    $ast->addPkg($node);
+    $node->sourceEnd($class->utils->lastLocation($element));
+    
+    $ast->curPkg->addStatement($node);
     
     return 1;
 }

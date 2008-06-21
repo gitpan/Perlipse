@@ -8,7 +8,7 @@ use XML::Writer;
 
 my $util = 'Perlipse::SourceParser::AST::Util';
 
-my @accessors = qw(curPkg);
+my @accessors = qw();
 __PACKAGE__->mk_accessors(@accessors);
 
 sub new
@@ -19,15 +19,38 @@ sub new
     $self->{pkgs} = [];
 
     return $self;
-
 }
 
 sub addPkg
 {
     my $self = shift;
     my ($pkg) = @_;
-    
+
+    # closeout an existing package
+    if (defined $self->{curPkg})
+    {
+        my $sEnd = $pkg->sourceStart() - 1;
+        $self->{curPkg}->sourceEnd($sEnd);
+    }
+
+    # add to the list of packages
     push @{$self->{pkgs}}, $pkg;
+    
+    # this package is now the current package
+    $self->{curPkg} = $pkg;
+}
+
+sub curPkg
+{
+    my $self = shift;
+
+    if (!defined $self->{curPkg})
+    {
+        $self->{curPkg} = _createMain($self);
+        $self->addPkg($self->{curPkg});
+    }
+    
+    return $self->{curPkg};    
 }
 
 sub createNode
@@ -56,17 +79,17 @@ sub createNode
 
     return Perlipse::SourceParser::AST::Node->new(
         $element->class,
-        name        => $value->content,
-        nStart   => $v_offset,
-        nEnd     => $v_offset + $value->length,
+        name   => $value->content,
+        nStart => $v_offset,
+        nEnd   => $v_offset + $value->length,
         sStart => $k_offset,
     );
 }
 
 sub toXml
 {
-    my $self = shift;    
-    
+    my $self = shift;
+
     my $writer = new XML::Writer(DATA_INDENT => 2, DATA_MODE => 1);
 
     $writer->startTag('module');
@@ -74,9 +97,20 @@ sub toXml
     {
         $pkg->toXml($writer);
     }
-    
+
     $writer->endTag;
     $writer->end;
+}
+
+sub _createMain
+{
+    return shift->createNode(
+        type   => 'PPI::Statement::Package',
+        name   => 'main',
+        nStart => 0,
+        nEnd   => 0,
+        sStart => 0,
+    );    
 }
 
 package Perlipse::SourceParser::AST::Node;
@@ -91,20 +125,20 @@ my @keys = qw(name nStart nEnd sStart sEnd);
 sub new
 {
     my $class = shift;
-    my $type = shift;
-    my %args = @_;
+    my $type  = shift;
+    my %args  = @_;
     Hash::Util::lock_keys(%args, @keys);
 
-    my $self = fields::new($class);    
+    my $self = fields::new($class);
 
     $self->{body} = [];
     $self->{type} = $type;
-    
+
     if (!exists $args{sEnd})
     {
         $args{sEnd} = 0;
     }
-        
+
     $self->{attr} = \%args;
 
     return $self;
@@ -118,16 +152,21 @@ sub addStatement
     push @{$self->{body}}, $node;
 }
 
+sub nameEnd
+{
+    return shift->{attr}->{nEnd};
+}
+
 sub sourceStart
 {
     my $self = shift;
     my ($start) = @_;
-    
+
     if ($start)
     {
         $self->{attr}->{sStart} = $start;
     }
-    
+
     return $self->{attr}->{sStart};
 }
 
@@ -135,12 +174,12 @@ sub sourceEnd
 {
     my $self = shift;
     my ($end) = @_;
-    
+
     if ($end)
     {
         $self->{attr}->{sEnd} = $end;
     }
-    
+
     return $self->{attr}->{sEnd};
 }
 
@@ -148,7 +187,7 @@ sub toXml
 {
     my $self = shift;
     my ($writer) = @_;
-    
+
     my $type = $util->getType($self->{type});
     $writer->startTag($type, %{$self->{attr}});
 
@@ -168,9 +207,9 @@ sub getType
 {
     my $class = shift;
     my ($type) = @_;
-    
+
     $type =~ m/.*\:\:(.*)/;
-    
+
     return lcfirst($1);
 }
 
